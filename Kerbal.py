@@ -12,6 +12,7 @@ subreddit = reddit.subreddit(subreddit_name)
 def send_direct_message(user, subject, message):
     reddit.redditor(user).message(subject, message)
 
+
 print(subreddit.stream.comments)
 for comment in subreddit.stream.comments(skip_existing=True):
     print(command_phrase in comment.body)
