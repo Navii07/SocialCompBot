@@ -12,9 +12,11 @@ reddit = praw.Reddit(
 subreddit = reddit.subreddit('neckbeardstestroom')
 
 subscription_dict = {}
-privacy_dict = {}
+private_users = []
 
-# Check comment stream for new (un)subscription requests
+# TODO: Bot is replying to its own comments
+
+# Check comment stream for new requests and mentions
 for comment in subreddit.stream.comments(skip_existing=True):
     # Add new keywords to user's subscription list
     if re.search("!sub", comment.body, re.IGNORECASE):
@@ -50,7 +52,57 @@ for comment in subreddit.stream.comments(skip_existing=True):
         comment.reply("*Beep Boop* \n\nYou have unsubscribed from the specified keywords.")
         print(subscription_dict)
 
+    # TODO: Default users to be public or private?
+    # Make users private on request
+    elif re.search("!privateme", comment.body, re.IGNORECASE):
+        if comment.author not in private_users:
+            private_users.append(comment.author)
 
+        # Have the bot reply to the comment confirming privacy setting changed
+        comment.reply("*Beep Boop* \n\nYour profile is now private.")
+        print(private_users)
+
+    # Make users public on request
+    elif re.search("!publicme", comment.body, re.IGNORECASE):
+        if comment.author in private_users:
+            private_users.remove(comment.author)
+
+        # Have the bot reply to the comment confirming privacy setting changed
+        comment.reply("*Beep Boop* \n\nYour profile is now public.")
+        print(private_users)
+
+    # List users who have subscribed to a certain keyword
+    elif re.search("!findusers", comment.body, re.IGNORECASE):
+        keywords = comment.body.replace("!findusers ", "").split(", ")
+
+        users_per_keyword = {}
+        for keyword in keywords:
+            users_per_keyword[keyword] = []
+            for user in subscription_dict:
+                if user not in private_users and keyword in subscription_dict[user]:
+                    users_per_keyword[keyword].append(user.name)
+
+        # Have the bot reply to the comment with usernames
+        # TODO: Move this to DMs and make it cleaner
+        comment.reply("*Beep Boop* \n\nThese are the users I found:\n\n" + str(users_per_keyword))
+        print(private_users)
+
+    else:
+        for user in subscription_dict:
+            for keyword in subscription_dict[user]:
+                if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != user.name:
+                    # Have the bot reply to the comment with an alert
+                    comment.reply("*Beep Boop* \n\nYour keyword \"" + keyword
+                                  + "\" was mentioned in a new comment by " + comment.author.name
+                                  + ". Go check it out!\n\n" + comment.submission.url)
+
+                    # user.message(
+                    #     subject="Your keyword \"" + keyword + "\" was mentioned!",
+                    #     message="Your keyword was mentioned in a new comment by " + comment.author.name
+                    #             + ". Go check it out!\n\n" + comment.submission.url
+                    # )
+
+# TODO: Not sure if these will be captured
 # TODO: Add option to silence bot for a post because a keyword might be repeated on many comments
 # Check new posts and comments for keywords
 for submission in subreddit.stream.submissions(skip_existing=True):
@@ -58,18 +110,12 @@ for submission in subreddit.stream.submissions(skip_existing=True):
         # TODO: Do we want a {user:keywords} dictionary or a {keyword:users} dictionary?
         for keyword in subscription_dict[user]:
             if re.search(keyword, submission.title, re.IGNORECASE) and submission.author.name != user.name:
-                # TODO: This might not work as the bot won't be able to DM users since it is a new account
-                user.message(
-                    subject="Your keyword \"" + keyword + "\" was mentioned!",
-                    message="Your keyword was mentioned in a new post. Go check it out!\n\n" + submission.url
-                )
+                # Have the bot reply to the comment with an alert
+                comment.reply("*Beep Boop* \n\nYour keyword \"" + keyword
+                              + "\" was mentioned in a new post. Go check it out!\n\n" + submission.url)
 
-for comment in subreddit.stream.comments(skip_existing=True):
-    for user in subscription_dict:
-        for keyword in subscription_dict[user]:
-            if re.search(keyword, comment.body, re.IGNORECASE) and submission.author.name != user.name:
-                user.message(
-                    subject="Your keyword \"" + keyword + "\" was mentioned!",
-                    message="Your keyword was mentioned in a new comment by " + comment.author.name
-                            + ". Go check it out!\n\n" + comment.submission.url
-                )
+                # # TODO: This might not work as the bot won't be able to DM users since it is a new account
+                # user.message(
+                #     subject="Your keyword \"" + keyword + "\" was mentioned!",
+                #     message="Your keyword was mentioned in a new post. Go check it out!\n\n" + submission.url
+                # )
