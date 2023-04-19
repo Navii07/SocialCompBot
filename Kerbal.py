@@ -1,42 +1,75 @@
 import praw
+import re
 
-reddit = praw.Reddit(client_id='kQalmPPoSPu9T4PwHrlyuw', client_secret='KtDxAZakapW1EZv3NTUCsDjRJVZojQ',
-                     user_agent='manavvats')
-subreddit_name = 'neckbeardstestroom'
+reddit = praw.Reddit(
+    client_id='zRFmLVVtIrtotSAiwLQU0Q',
+    client_secret='KQQgQEj87V7t4u4Ob9FYTscq1BdL6w',
+    user_agent='Kerbal_Bot',
+    username='Kerbal_Bot',
+    password='pVzNkPER9JmFYAf'
+)
 
-command_phrase = "!subto"
+subreddit = reddit.subreddit('neckbeardstestroom')
 
-subreddit = reddit.subreddit(subreddit_name)
+subscription_dict = {}
+privacy_dict = {}
 
-
-def send_direct_message(user, subject, message):
-    reddit.redditor(user).message(subject, message)
-
-
-print(subreddit.stream.comments)
+# Check comment stream for new (un)subscription requests
 for comment in subreddit.stream.comments(skip_existing=True):
-    print(command_phrase in comment.body)
-    if command_phrase in comment.body:
-        input_keywords = comment.body.replace(command_phrase, "").strip()
-        all_keywords = input_keywords.split(",")
-        first_word = all_keywords[0]
-        keyword = first_word
-        print(keyword)
-    for submission in subreddit.new(limit=10):
-        # if keyword.lower() in submission.title.lower():
-        if submission.title.lower().find(keyword.lower()) != -1:
-            print("The word " + keyword + " was used in the title of the post:")
-            print(submission.title)
-            # send_direct_message(submission.author.name, "[insert message here]")
-        # if keyword.lower() in submission.selftext.lower():
-        if submission.selftext.lower().find(keyword.lower()) != -1:
-            print("The word " + keyword + " was used in the body of the post:")
-            print(submission.selftext)
-            # send_direct_message(submission.author.name, "[insert message here]")
-        # submission.comments.replace_more(limit=None)
-        # for comment in submission.comments.list():
-    # if keyword.lower() in comment.body.lower():
-    if comment.body.lower().find(keyword.lower()) != -1:
-        print("The word " + keyword + " was used in a comment:")
-        print(comment.body)
-        # send_direct_message(comment.author.name, "[insert message here]")
+    # Add new keywords to user's subscription list
+    if re.search("!sub", comment.body, re.IGNORECASE):
+        # Keywords should be separated by commas
+        # TODO: Handle lower/upper case keywords
+        keywords = comment.body.replace("!sub ", "").split(", ")
+
+        # Add keywords to user's subscription list
+        # TODO: Should we limit the amount of subscriptions per user?
+        if comment.author not in subscription_dict:
+            subscription_dict[comment.author] = keywords
+        else:
+            for keyword in keywords:
+                if keyword not in subscription_dict[comment.author]:
+                    subscription_dict[comment.author].append(keyword)
+
+        # Have the bot reply to the comment confirming subscription
+        comment.reply("*Beep Boop* \n\nYou are now subscribed to the specified keywords!")
+        print(subscription_dict)
+
+    # Remove keywords from a user's subscription list
+    elif re.search("!unsub", comment.body, re.IGNORECASE):
+        # Keywords should be separated by commas
+        keywords = comment.body.replace("!unsub ", "").split(", ")
+
+        # Remove keywords from user's subscription list
+        if comment.author in subscription_dict:
+            for keyword in keywords:
+                if keyword in subscription_dict[comment.author]:
+                    subscription_dict[comment.author].remove(keyword)
+
+        # Have the bot reply to the comment confirming subscription
+        comment.reply("*Beep Boop* \n\nYou have unsubscribed from the specified keywords.")
+        print(subscription_dict)
+
+
+# TODO: Add option to silence bot for a post because a keyword might be repeated on many comments
+# Check new posts and comments for keywords
+for submission in subreddit.stream.submissions(skip_existing=True):
+    for user in subscription_dict:
+        # TODO: Do we want a {user:keywords} dictionary or a {keyword:users} dictionary?
+        for keyword in subscription_dict[user]:
+            if re.search(keyword, submission.title, re.IGNORECASE) and submission.author.name != user.name:
+                # TODO: This might not work as the bot won't be able to DM users since it is a new account
+                user.message(
+                    subject="Your keyword \"" + keyword + "\" was mentioned!",
+                    message="Your keyword was mentioned in a new post. Go check it out!\n\n" + submission.url
+                )
+
+for comment in subreddit.stream.comments(skip_existing=True):
+    for user in subscription_dict:
+        for keyword in subscription_dict[user]:
+            if re.search(keyword, comment.body, re.IGNORECASE) and submission.author.name != user.name:
+                user.message(
+                    subject="Your keyword \"" + keyword + "\" was mentioned!",
+                    message="Your keyword was mentioned in a new comment by " + comment.author.name
+                            + ". Go check it out!\n\n" + comment.submission.url
+                )
