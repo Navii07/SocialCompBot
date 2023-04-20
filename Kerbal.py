@@ -14,7 +14,7 @@ subreddit = reddit.subreddit('neckbeardstestroom')
 subscription_dict = {}
 private_users = []
 
-# TODO: Bot is replying to its own comments
+# TODO: When there are no users subscribed to the specified keywords, change the bot message
 
 # Check comment stream for new requests and mentions
 for comment in subreddit.stream.comments(skip_existing=True):
@@ -25,7 +25,6 @@ for comment in subreddit.stream.comments(skip_existing=True):
         keywords = comment.body.replace("!sub ", "").split(", ")
 
         # Add keywords to user's subscription list
-        # TODO: Should we limit the amount of subscriptions per user?
         if comment.author not in subscription_dict:
             subscription_dict[comment.author] = keywords
         else:
@@ -52,7 +51,7 @@ for comment in subreddit.stream.comments(skip_existing=True):
         comment.reply("*Beep Boop* \n\nYou have unsubscribed from the specified keywords.")
         print(subscription_dict)
 
-    # TODO: Default users to be public or private?
+    # TODO: Set default privacy to private instead of public
     # Make users private on request
     elif re.search("!privateme", comment.body, re.IGNORECASE):
         if comment.author not in private_users:
@@ -90,7 +89,7 @@ for comment in subreddit.stream.comments(skip_existing=True):
     else:
         for user in subscription_dict:
             for keyword in subscription_dict[user]:
-                if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != user.name:
+                if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != user.name and comment.author.name != "Kerbal_Bot":
                     # Have the bot reply to the comment with an alert
                     comment.reply("*Beep Boop* \n\nYour keyword \"" + keyword
                                   + "\" was mentioned in a new comment by " + comment.author.name
@@ -102,12 +101,12 @@ for comment in subreddit.stream.comments(skip_existing=True):
                     #             + ". Go check it out!\n\n" + comment.submission.url
                     # )
 
-# TODO: Not sure if these will be captured
+# TODO: Move everything into the same loop/function
 # TODO: Add option to silence bot for a post because a keyword might be repeated on many comments
 # Check new posts and comments for keywords
 for submission in subreddit.stream.submissions(skip_existing=True):
     for user in subscription_dict:
-        # TODO: Do we want a {user:keywords} dictionary or a {keyword:users} dictionary?
+        # TODO: Switch to a {keyword:users} dictionary instead of a {user:keywords} dictionary
         for keyword in subscription_dict[user]:
             if re.search(keyword, submission.title, re.IGNORECASE) and submission.author.name != user.name:
                 # Have the bot reply to the comment with an alert
