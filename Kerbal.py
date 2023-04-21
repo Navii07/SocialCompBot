@@ -125,7 +125,7 @@ def checkComments():
                         # comment.author.name != user.name and
                         if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != "Kerbal_Bot":
                             # Have the bot reply to the comment with an alert
-                            comment.reply("*Beep Boop* \n\nYour keyword \"" + keyword
+                            comment.reply("*Beep Boop* " + "u/" + user.name + "\n\nYour keyword \"" + keyword
                                           + "\" was mentioned in a new comment by " + comment.author.name
                                           + ". Go check it out!\n\n" + comment.submission.url)
                         # print(public_users)
@@ -156,7 +156,7 @@ def checkSubmissions():
 
                     if re.search(keyword, submission.title, re.IGNORECASE):
                         # Have the bot reply to the comment with an alert
-                        reply_string = "*Beep Boop* \n\nYour keyword \"" + keyword \
+                        reply_string = "*Beep Boop* " + "u/" + user.name + "\n\nYour keyword \"" + keyword \
                                        + "\" was mentioned in a new post. Go check it out!\n\n" + submission.url
                         already_said = False
 
