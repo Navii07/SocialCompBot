@@ -107,12 +107,12 @@ def checkComments():
                 for keyword in keywords:
                     users_per_keyword[keyword] = []
                     for user in subscription_dict:
-                        if user not in public_users and keyword in subscription_dict[user]:
+                        if user in public_users and keyword in subscription_dict[user]:
                             users_per_keyword[keyword].append(user.name)
 
                 # Have the bot reply to the comment with usernames
                 # TODO: Move this to DMs and make it cleaner
-                if str(users_per_keyword) == '[]':
+                if str(users_per_keyword) != '[]':
                     comment.reply("*Beep Boop* \n\nThese are the users I found:\n\n" + str(users_per_keyword))
                 else:
                     comment.reply("*Beep Boop* \n\nI found no users!")
