@@ -1,5 +1,6 @@
 import re
 import praw
+import time
 
 reddit = praw.Reddit(
     client_id='zRFmLVVtIrtotSAiwLQU0Q',
@@ -12,6 +13,7 @@ reddit = praw.Reddit(
 subreddit = reddit.subreddit('neckbeardstestroom')
 
 subscription_dict = {}
+silence_dict = {}
 public_users = []
 
 # TODO: When multiple keywords are used in the same comment or title please only respond once
@@ -27,6 +29,7 @@ def checkComments():
         for comment in subreddit.stream.comments(skip_existing=True, pause_after=3):
 
             # Add new keywords to user's subscription list
+            b=time.perf_counter()
             if re.search("!sub", comment.body, re.IGNORECASE):
                 # Keywords should be separated by commas
                 keywords = comment.body.replace("!sub ", "").split(", ")
@@ -35,12 +38,9 @@ def checkComments():
                 keywords = [k.lower() for k in keywords]
 
                 # Add keywords to user's subscription list
-                if comment.author not in subscription_dict:
-                    subscription_dict[comment.author] = keywords
-                else:
-                    for keyword in keywords:
-                        if keyword not in subscription_dict[comment.author]:
-                            subscription_dict[comment.author].append(keyword)
+                for keyword in keywords:
+                    if comment.author not in subscription_dict[keyword]:
+                        subscription_dict[keyword].append(comment.author)
 
                 # Have the bot reply to the comment confirming subscription
                 # Creates a string that has all keywords separated by commas
@@ -62,10 +62,9 @@ def checkComments():
                 keywords = [k.lower() for k in keywords]
 
                 # Remove keywords from user's subscription list
-                if comment.author in subscription_dict:
-                    for keyword in keywords:
-                        if keyword in subscription_dict[comment.author]:
-                            subscription_dict[comment.author].remove(keyword)
+                for keyword in keywords:
+                    if comment.author in subscription_dict[keyword]:
+                        subscription_dict[keyword].remove(comment.author)
 
                 # Have the bot reply to the comment confirming unsubscription
                 # Creates a string that has all keywords separated by commas
@@ -106,9 +105,8 @@ def checkComments():
                 users_per_keyword = {}
                 for keyword in keywords:
                     users_per_keyword[keyword] = []
-                    for user in subscription_dict:
-                        if user in public_users and keyword in subscription_dict[user]:
-                            users_per_keyword[keyword].append(user.name)
+                    if user in public_users and user in subscription_dict[keyword]:
+                        users_per_keyword[keyword].append(user.name)
 
                 # Have the bot reply to the comment with usernames
                 # TODO: Move this to DMs and make it cleaner
@@ -117,15 +115,46 @@ def checkComments():
                 else:
                     comment.reply("*Beep Boop* \n\nI found no users!")
                 # print(public_users)
+            elif re.search("!silence", comment.body, re.IGNORECASE):
+                # Keywords should be separated by commas
+                a = time.perf_counter()
+                keywords = comment.body.replace("!sub ", "").split(", ")
 
+                # Force all keywords to lower case
+                keywords = [k.lower() for k in keywords]
+
+                # Add keywords to user's subscription list
+                if comment.author not in silence_dict:
+                    silence_dict[comment.author] = keywords
+                else:
+                    for keyword in keywords:
+                        if keyword not in silence_dict[comment.author]:
+                            silence_dict[comment.author].append(keyword)
+
+                # Have the bot reply to the comment confirming subscription
+                # Creates a string that has all keywords separated by commas
+                # Then prints full message with keywords
+                keywords_string = ""
+                for keyword in keywords:
+                    keywords_string = keywords_string + ", " + keyword
+                keywords_string = keywords_string.split(",")[1:]
+                keywords_string = ", ".join(keywords_string)
+                comment.reply("*Beep Boop* \n\nThe following keywords have been silenced for 24 hours: " + keywords_string)
+                # print(subscription_dict)
+            elif b-a >=86400:
+                silence_dict.clear()
             else:
-
-                for user in subscription_dict:
-                    for keyword in subscription_dict[user]:
+                for keyword in subscription_dict:
+                    for user in subscription_dict[keyword]:
                         # comment.author.name != user.name and
-                        if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != "Kerbal_Bot":
+                        if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != "Kerbal_Bot" and keyword not in silence_dict[user]:
                             # Have the bot reply to the comment with an alert
-                            comment.reply("*Beep Boop* " + "u/" + user.name + "\n\nYour keyword \"" + keyword
+                            users_per_keyword = {}
+                            for keyword in keywords:
+                                users_per_keyword[keyword] = []
+                                if user in public_users and user in subscription_dict[keyword]:
+                                    users_per_keyword[keyword].append(user.name)
+                            comment.reply("*Beep Boop* " + "Hi, " + str(users_per_keyword) + "!" + "\n\nYour keyword \"" + keyword
                                           + "\" was mentioned in a new comment by " + comment.author.name
                                           + ". Go check it out!\n\n" + comment.submission.url)
                         # print(public_users)
@@ -147,14 +176,14 @@ def checkSubmissions():
         # Check new posts and comments for keywords
         for submission in subreddit.new(limit=10):
 
-            for user in subscription_dict:
+            for keyword in subscription_dict:
                 # TODO: Switch to a {keyword:users} dictionary instead of a {user:keywords} dictionary
                 # print("checking user")
-                for keyword in subscription_dict[user]:
+                for user in subscription_dict[keyword]:
                     # print("checking keyword")
                     # and submission.author.name != user.name
 
-                    if re.search(keyword, submission.title, re.IGNORECASE):
+                    if re.search(keyword, submission.title, re.IGNORECASE) and keyword not in silence_dict[user]:
                         # Have the bot reply to the comment with an alert
                         reply_string = "*Beep Boop* " + "u/" + user.name + "\n\nYour keyword \"" + keyword \
                                        + "\" was mentioned in a new post. Go check it out!\n\n" + submission.url
