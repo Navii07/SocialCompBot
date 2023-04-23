@@ -17,6 +17,7 @@ public_users = []
 # TODO: When multiple keywords are used in the same comment or title please only respond once
 # Stable Version
 
+
 def checkComments():
 
     print("checking comments...")
