@@ -33,15 +33,19 @@ def checkComments():
             if re.search("!sub", comment.body, re.IGNORECASE):
                 # Keywords should be separated by commas
                 keywords = comment.body.replace("!sub ", "").split(", ")
-
+                print("!sub used")
                 # Force all keywords to lower case
                 keywords = [k.lower() for k in keywords]
-
+                print(keywords)
                 # Add keywords to user's subscription list
                 for keyword in keywords:
-                    if comment.author not in subscription_dict[keyword]:
-                        subscription_dict[keyword].append(comment.author)
-
+                    if keyword not in subscription_dict:
+                        subscription_dict[keyword] = str(comment.author)
+                    else:
+                        subscription_dict[keyword].append(str(comment.author))
+                print(keywords)
+                print(subscription_dict)
+                
                 # Have the bot reply to the comment confirming subscription
                 # Creates a string that has all keywords separated by commas
                 # Then prints full message with keywords
@@ -63,8 +67,8 @@ def checkComments():
 
                 # Remove keywords from user's subscription list
                 for keyword in keywords:
-                    if comment.author in subscription_dict[keyword]:
-                        subscription_dict[keyword].remove(comment.author)
+                    if str(comment.author) in subscription_dict[keyword]:
+                        subscription_dict[keyword].remove(str(comment.author))
 
                 # Have the bot reply to the comment confirming unsubscription
                 # Creates a string that has all keywords separated by commas
@@ -79,8 +83,8 @@ def checkComments():
 
             # Make users public on request
             elif re.search("!publicme", comment.body, re.IGNORECASE):
-                if comment.author not in public_users:
-                    public_users.append(comment.author)
+                if str(comment.author) not in public_users:
+                    public_users.append(str(comment.author))
 
                 # Have the bot reply to the comment confirming privacy setting changed
                 comment.reply("*Beep Boop* \n\nYour profile is now public.")
@@ -88,8 +92,8 @@ def checkComments():
 
             # Make users private on request
             elif re.search("!privateme", comment.body, re.IGNORECASE):
-                if comment.author in public_users:
-                    public_users.remove(comment.author)
+                if str(comment.author) in public_users:
+                    public_users.remove(str(comment.author))
 
                 # Have the bot reply to the comment confirming privacy setting changed
                 comment.reply("*Beep Boop* \n\nYour profile is now private.")
@@ -105,8 +109,9 @@ def checkComments():
                 users_per_keyword = {}
                 for keyword in keywords:
                     users_per_keyword[keyword] = []
-                    if user in public_users and user in subscription_dict[keyword]:
-                        users_per_keyword[keyword].append(user.name)
+                    if keyword in subscription_dict:
+                        if str(user) in public_users and str(user.name) in subscription_dict[keyword]:
+                            users_per_keyword[keyword].append(str(user.name))
 
                 # Have the bot reply to the comment with usernames
                 # TODO: Move this to DMs and make it cleaner
@@ -124,12 +129,12 @@ def checkComments():
                 keywords = [k.lower() for k in keywords]
 
                 # Add keywords to user's subscription list
-                if comment.author not in silence_dict:
-                    silence_dict[comment.author] = keywords
+                if str(comment.author) not in silence_dict:
+                    silence_dict[str(comment.author)] = keywords
                 else:
                     for keyword in keywords:
-                        if keyword not in silence_dict[comment.author]:
-                            silence_dict[comment.author].append(keyword)
+                        if keyword not in silence_dict[str(comment.author)]:
+                            silence_dict[str(comment.author)].append(keyword)
 
                 # Have the bot reply to the comment confirming subscription
                 # Creates a string that has all keywords separated by commas
@@ -147,22 +152,22 @@ def checkComments():
                 for keyword in subscription_dict:
                     for user in subscription_dict[keyword]:
                         # comment.author.name != user.name and
-                        if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != "Kerbal_Bot" and keyword not in silence_dict[user]:
-                            # Have the bot reply to the comment with an alert
-                            users_per_keyword = {}
-                            for keyword in keywords:
+                        if user not in silence_dict:
+                            if re.search(keyword, comment.body, re.IGNORECASE) and comment.author.name != "Kerbal_Bot" and keyword not in silence_dict[user]:
+                                # Have the bot reply to the comment with an alert
+                                users_per_keyword = {}
                                 users_per_keyword[keyword] = []
                                 if user in public_users and user in subscription_dict[keyword]:
                                     users_per_keyword[keyword].append(user.name)
-                            comment.reply("*Beep Boop* " + "Hi, " + str(users_per_keyword) + "!" + "\n\nYour keyword \"" + keyword
-                                          + "\" was mentioned in a new comment by " + comment.author.name
-                                          + ". Go check it out!\n\n" + comment.submission.url)
-                        # print(public_users)
-                            # user.message(
-                            #     subject="Your keyword \"" + keyword + "\" was mentioned!",
-                            #     message="Your keyword was mentioned in a new comment by " + comment.author.name
-                            #             + ". Go check it out!\n\n" + comment.submission.url
-                            # )
+                                comment.reply("*Beep Boop* " + "Hi, " + str(users_per_keyword) + "!" + "\n\nYour keyword \"" + keyword
+                                            + "\" was mentioned in a new comment by " + comment.author.name
+                                            + ". Go check it out!\n\n" + comment.submission.url)
+                            # print(public_users)
+                                # user.message(
+                                #     subject="Your keyword \"" + keyword + "\" was mentioned!",
+                                #     message="Your keyword was mentioned in a new comment by " + comment.author.name
+                                #             + ". Go check it out!\n\n" + comment.submission.url
+                                # )
     except Exception as e:
         print("")
 
@@ -182,31 +187,35 @@ def checkSubmissions():
                 for user in subscription_dict[keyword]:
                     # print("checking keyword")
                     # and submission.author.name != user.name
+                    if user not in silence_dict:
+                        if re.search(keyword, submission.title, re.IGNORECASE) and keyword not in silence_dict[user]:
+                            # Have the bot reply to the comment with an alert
+                            users_per_keyword = {}
+                            users_per_keyword[keyword] = []
+                            if user in public_users and user in subscription_dict[keyword]:
+                                users_per_keyword[keyword].append(user.name)
+                            reply_string = "*Beep Boop* " + "Hi, " + str(users_per_keyword) + "!" + "\n\nYour keyword " + keyword + " was mentioned in a new comment by " + comment.author.name + ". Go check it out!\n\n" + comment.submission.url
+                            already_said = False
 
-                    if re.search(keyword, submission.title, re.IGNORECASE) and keyword not in silence_dict[user]:
-                        # Have the bot reply to the comment with an alert
-                        reply_string = "*Beep Boop* " + "u/" + user.name + "\n\nYour keyword \"" + keyword \
-                                       + "\" was mentioned in a new post. Go check it out!\n\n" + submission.url
-                        already_said = False
+                            # For loop to make sure no comment is repeated for submissions
+                            for comment in submission.comments:
+                                if comment.body == reply_string:
+                                    already_said = True
+                                    break
 
-                        # For loop to make sure no comment is repeated for submissions
-                        for comment in submission.comments:
-                            if comment.body == reply_string:
-                                already_said = True
-                                break
+                            if not already_said:
+                                submission.reply(reply_string)
 
-                        if not already_said:
-                            submission.reply(reply_string)
+                        # print(public_users)
 
-                    # print(public_users)
-
-                        # # TODO: This might not work as the bot won't be able to DM users since it is a new account
-                        # user.message(
-                        #     subject="Your keyword \"" + keyword + "\" was mentioned!",
-                        #     message="Your keyword was mentioned in a new post. Go check it out!\n\n" + submission.url
+                            # # TODO: This might not work as the bot won't be able to DM users since it is a new account
+                            # user.message(
+                            #     subject="Your keyword \"" + keyword + "\" was mentioned!",
+                            #     message="Your keyword was mentioned in a new post. Go check it out!\n\n" + submission.url
                         # )
     except Exception as e:
         print(f"Error in checkSubmissions(): {e}")
+        print(traceback.format_exc())
 
 
 while True:
