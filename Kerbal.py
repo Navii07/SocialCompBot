@@ -16,7 +16,7 @@ public_users = []
 
 # TODO: When multiple keywords are used in the same comment or title please only respond once
 # Stable Version
-# This is a test for a new Github branch
+# This is a test for a new Github branch that tests file output usage
 
 
 def checkComments():
@@ -27,6 +27,25 @@ def checkComments():
 
         # Check comment stream for new requests and mentions
         for comment in subreddit.stream.comments(skip_existing=True, pause_after=3):
+
+            print("Reading data from file...")
+
+            # read the data from the file
+            with open("data.text", "r") as f:
+                # read the dictionary
+                my_dict_str = f.readline().strip()
+                subscription_dict = eval(my_dict_str)
+
+                # read the list
+                my_list_str = f.readline().strip()
+                public_users = eval(my_list_str)
+
+            f.close()
+
+            print("Data read from file.")
+
+            print(subscription_dict)
+            print(public_users)
 
             # Add new keywords to user's subscription list
             if re.search("!sub", comment.body, re.IGNORECASE):
@@ -136,6 +155,18 @@ def checkComments():
                             #     message="Your keyword was mentioned in a new comment by " + comment.author.name
                             #             + ". Go check it out!\n\n" + comment.submission.url
                             # )
+
+        print("Writing data to file...")
+
+        # write the data to the file
+        with open("data.txt", "w") as f:
+            f.write(f"{subscription_dict}\n")
+            f.write(f"{public_users}\n")
+
+        f.close()
+
+        print("Wrote data to file.")
+
     except Exception as e:
         print("")
 
